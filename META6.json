@@ -1,0 +1,26 @@
+{
+  "auth": "zef:dwarring",
+  "authors": [
+    "David Warring"
+  ],
+  "build-depends": [
+  ],
+  "depends": [
+  ],
+  "description": "Minimalistic scaffolding for the creation of high level language expression grammars",
+  "license": "Artistic-2.0",
+    "name": "HLL::Expression::Grammar",
+  "raku": "6.d",
+  "provides": {
+      "HLL::Expression::Grammar": "lib/HLL/Expression/Grammar.rakumod",
+      "HLL::Expression::Grammar::Actions": "lib/HLL/Expression/Grammar/Actions.rakumod"
+  },
+  "resources": [
+  ],
+  "source-url": "",
+  "tags": [
+  ],
+  "test-depends": [
+  ],
+  "version": "0.0.1"
+}
