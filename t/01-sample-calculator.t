@@ -62,10 +62,10 @@ grammar Calculator {
         method integer($/) { make $/.Int }
         method decimal-number($/) { make $/.Rat }
 
-        multi sub calc(% (:$lhs!, :$op!, :$rhs!)) { # infix
-            my $v1 = calc $lhs;
-            my $v2 = calc $rhs;
-            given $op {
+        multi sub calc(% (:$infix!, :$left!, :$right!)) {
+            my $v1 = calc $left;
+            my $v2 = calc $right;
+            given $infix {
                 when '+' { $v1 + $v2 }
                 when '-' { $v1 - $v2 }
                 when '*' { $v1 * $v2 }
@@ -73,17 +73,17 @@ grammar Calculator {
                 default { fail "Unhandled infix operator: {.raku}" }
             }
         }
-        multi sub calc(% (:$op!, :$rhs!)) {  # prefix
-            my $v = calc $rhs;
-            given $op {
+        multi sub calc(% (:$prefix!, :$operand!)) {
+            my $v = calc $operand;
+            given $prefix {
                 when '+' { + $v }
                 when '-' { - $v }
                 default { fail "Unhandled prefix operator: {.raku}" }
             }
         }
-        multi sub calc(% (:$op!, :$lhs!)) { #postfix
-            my $v = calc $lhs;
-            given $op {
+        multi sub calc(% (:$postfix!, :$operand!)) {
+            my $v = calc $operand;
+            given $postfix {
                 when '!' { $v.&factorial }
                 default { fail "Unhandled postfix operator: {.raku}" }
             }

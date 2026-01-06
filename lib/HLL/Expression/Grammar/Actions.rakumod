@@ -2,28 +2,28 @@ unit role HLL::Expression::Grammar::Actions;
 
 use Method::Also;
 
-multi reduce-op(@expr, $pos, 'prefix', :$op!) {
-    my $rhs = @expr.splice($pos+1, 1).head;
-    @expr[$pos] = %( :$op, :$rhs );
+multi reduce-op(@expr, $pos, 'prefix', :op($prefix)!) {
+    my $operand = @expr.splice($pos+1, 1).head;
+    @expr[$pos] = %( :$prefix, :$operand );
 }
 
-multi reduce-op(@expr, $pos, 'postfix', :$op!) {    
-    my $lhs = @expr.splice($pos-1, 1).head;
-    @expr[$pos-1] = %( :$op, :$lhs );
+multi reduce-op(@expr, $pos, 'postfix', :op($postfix)!) {
+    my $operand = @expr.splice($pos-1, 1).head;
+    @expr[$pos-1] = %( :$postfix, :$operand );
 }
 
-multi reduce-op(@expr, $pos, 'infix', :$op!) {
-    my $lhs = @expr.splice($pos-1, 1).head;
-    my $rhs = @expr.splice($pos, 1).head;
-    @expr[$pos-1] = %( :$op, :$lhs, :$rhs );
+multi reduce-op(@expr, $pos, 'infix', :op($infix)!) {
+    my $right = @expr.splice($pos+1, 1).head;
+    my $left  = @expr.splice($pos-1, 1).head;
+    @expr[$pos-1] = %( :$infix, :$left, :$right );
 }
 
-sub reduce(@expr, :prec($prev-prec) = Inf) {
+sub reduce-expr(@expr, :prec($prev-prec) = Inf) {
     # find the loosest precedence
     my $prec = @expr.grep({.<oper> && .<oper><slack> < $prev-prec}).map(*<oper><slack>).max;
     if $prec >= 0 {
         # reduce any inner higher precedence operations
-        @expr.&reduce(:$prec);
+        @expr.&reduce-expr(:$prec);
         # factor operations at this precedenced level
         while (my @opns = @expr.grep: {.<oper> && .<oper><slack> == $prec}, :p) {
             my Pair $opn = @opns.head.value<oper><assoc> ~~ 'unary'|'left'
@@ -54,7 +54,7 @@ method O($/) {
 method EXPR(Capture $/) {
     my @EXPR;
     @EXPR.append: .value.ast for $/.caps;
-    @EXPR.&reduce;
+    @EXPR.&reduce-expr;
     make @EXPR;
 }
 

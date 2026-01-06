@@ -3,7 +3,7 @@ HLL-Expression-Grammar
 
 Simple, minimalist  grammar/actions roles for defining high-level language expressions, notably:
 
-- terms & values
+- `term`s & `value`s
 - `prefix`, `infix`, `postfix` and `circumfix` operators.
 - precedence rules
 
