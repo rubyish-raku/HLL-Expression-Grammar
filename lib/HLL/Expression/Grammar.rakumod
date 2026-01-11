@@ -13,7 +13,7 @@ multi token EXPR {
     <termish> *% <infixish>
 }
 
-token termish { <prefixish>* <term> <postfixish>* }
+token termish {:s <prefixish>* <term> <postfixish>* }
 
 token infixish {:s <OPER=.infix> }
 token prefixish {:s <OPER=.prefix> }
