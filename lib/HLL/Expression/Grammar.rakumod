@@ -7,7 +7,7 @@ proto token postfix { <...> }
 proto token circumfix { <...> }
 proto token postcircumfix { <...> }
 
-token O(:$*slack!, :$*assoc!) { <?> }
+token O(:$*slack!, :$*assoc!, :$*op) { <?> }
 
 multi token EXPR {
     <termish> *% <infixish>

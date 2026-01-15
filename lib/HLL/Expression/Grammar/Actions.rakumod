@@ -18,6 +18,13 @@ multi reduce-op(@expr, $pos, 'infix', :op($infix)!) {
     @expr[$pos-1] = %( :$infix, :$left, :$right );
 }
 
+multi reduce-op(@expr, $pos, 'ternary', :op($ternary)!) {
+    my $then  = @expr[$pos]<oper><then>:delete.head;
+    my $else  = @expr.splice($pos+1, 1).head;
+    my $cond  = @expr.splice($pos-1, 1).head;
+    @expr[$pos-1] = %( :$ternary, :$cond, :$then, :$else );
+}
+
 sub reduce-expr(@expr, :prec($prev-prec) = Inf) {
     # find the loosest precedence
     my $prec = @expr.grep({.<oper> && .<oper><slack> < $prev-prec}).map(*<oper><slack>).max;
@@ -48,7 +55,7 @@ method termish($/) {
 }
 
 method O($/) {
-    make %( :$*slack, :$*assoc );
+    make %( :$*slack, :$*assoc, :$*op );
 }
 
 method EXPR(Capture $/) {
@@ -58,23 +65,32 @@ method EXPR(Capture $/) {
     make @EXPR;
 }
 
-method infixish($/) {
+multi method infixish($/ where $<OPER><then>) {
     my %oper = $<OPER><O>.ast;
-    %oper<op> = $<OPER>.Str;
+    %oper<type> = 'ternary';
+    %oper<op> //= $<OPER>.Str;
+    %oper<then> = $<OPER><then>.ast;
+    make (:%oper);
+}
+
+multi method infixish($/) {
+    my %oper = $<OPER><O>.ast;
     %oper<type> = 'infix';
+    %oper<op> //= $<OPER>.Str;
+    %oper<EXPR> = .ast with $<EXPR>;
     make (:%oper);
 }
 
 method prefixish($/) {
     my %oper = $<OPER><O>.ast;
-    %oper<op> = $<OPER>.Str;
     %oper<type> = 'prefix';
+    %oper<op> //= $<OPER>.Str;
     make (:%oper);
 }
 
 method postfixish($/) {
     my %oper = $<OPER><O>.ast;
-    %oper<op> = $<OPER>.Str;
     %oper<type> = 'postfix';
+    %oper<op> //= $<OPER>.Str;
     make (:%oper);
 }
