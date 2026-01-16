@@ -20,9 +20,11 @@ grammar Calculator {
     $slack++;
     my %multiplicative = :$slack, :assoc<left>;  # * /
     $slack++;
-    my %additive       = :$slack, :assoc<left>;  # + -
+    my %additive       = :$slack, :assoc<left>;  # + - (infix)
     $slack++;
-    my %ternary        = :$slack, :assoc<right>;  # ?:
+    my %equality       = :$slack, :assoc<left>;  # ==
+    $slack++;
+    my %ternary        = :$slack, :assoc<right>; # ?:
 
     rule separator       { ';' | \n }
     rule stmtlist { [ <stmt>? ] *%% <.separator> }
@@ -31,8 +33,9 @@ grammar Calculator {
     token postfix:sym<!> { <sym> <O(|%unary)> }
     token infix:sym<+>   { <sym> <O(|%additive)> }
     token infix:sym<->   { <sym> <O(|%additive)> }
-    token infix:sym<*>   { <sym> <O(|%unary)> }
-    token infix:sym</>   { <sym> <O(|%unary)> }
+    token infix:sym<*>   { <sym> <O(|%multiplicative)> }
+    token infix:sym</>   { <sym> <O(|%multiplicative)> }
+    token infix:sym<==>  { <sym> <O(|%equality)> }
     token infix:sym<?:>  {:s '?' <then=.EXPR> ':' <O(|%ternary, :op<?:>)> }
 
     # Parenthesis
@@ -70,10 +73,11 @@ grammar Calculator {
             my $v1 = calc $left;
             my $v2 = calc $right;
             given $infix {
-                when '+' { $v1 + $v2 }
-                when '-' { $v1 - $v2 }
-                when '*' { $v1 * $v2 }
-                when '/' { $v1 / $v2 }
+                when '+'  { $v1 + $v2 }
+                when '-'  { $v1 - $v2 }
+                when '*'  { $v1 * $v2 }
+                when '/'  { $v1 / $v2 }
+                when '==' { +($v1 == $v2) }
                 default { fail "Unhandled infix operator: {.raku}" }
             }
         }
@@ -105,7 +109,7 @@ grammar Calculator {
  subtest "parse sanity", {
      for ("4!" => 24, "4!+-3" => 21, "4+2+36" => 42, "-42" => -42, "4.2" => 4.2, "2++40" => 42,
           "(2+3)!"=> 120, "2 + 3 * 5" => 17, "(2+3)*5" => 25, "8/2" => 4.0, "((4*3)-(3*2))" => 6,
-          "1+1 ? 1+1 : 1-1" => 2, "1-1 ? 1+1 : 1-1" => 0) {
+          "1==1 ? 1+2 : 1-2" => 3, "1==0 ? 1+2 : 1-2" => -1) {
          my $expr = .key;
          my $expected-result = .value;
          my Calculator::Actions $actions .= new;
