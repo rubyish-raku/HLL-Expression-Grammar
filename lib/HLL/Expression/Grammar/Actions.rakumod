@@ -19,26 +19,27 @@ multi reduce-op(@expr, $pos, 'infix', :op($infix)!) {
 }
 
 multi reduce-op(@expr, $pos, 'ternary', :op($ternary)!) {
-    my $then  = @expr[$pos]<oper><then>:delete.head;
-    my $else  = @expr.splice($pos+1, 1).head;
-    my $cond  = @expr.splice($pos-1, 1).head;
-    @expr[$pos-1] = %( :$ternary, :$cond, :$then, :$else );
+    my $right  = @expr.splice($pos+1, 1).head;
+    my $mid  = @expr[$pos]<oper><mid>:delete.head;
+    my $left  = @expr.splice($pos-1, 1).head;
+    @expr[$pos-1] = %( :$ternary, :$left, :$mid, :$right );
 }
 
-sub reduce-expr(@expr, :prec($prev-prec) = Inf) {
-    # find the loosest precedence
-    my $prec = @expr.grep({.<oper> && .<oper><slack> < $prev-prec}).map(*<oper><slack>).max;
-    if $prec >= 0 {
-        # reduce any inner higher precedence operations
-        @expr.&reduce-expr(:$prec);
-        # factor operations at this precedenced level
-        while (my @opns = @expr.grep: {.<oper> && .<oper><slack> == $prec}, :p) {
-            my Pair $opn = @opns.head.value<oper><assoc> ~~ 'unary'|'left'
-                             ?? @opns.shift
-                             !! @opns.pop;
-            given $opn.value<oper> {
-                my $op = .<op>;
-                @expr.&reduce-op($opn.key, .<type>, :$op);
+sub reduce-expr(@expr, :$prec = Inf) {
+    # find the next loosest precedence
+    given @expr.grep({.<oper> && .<oper><slack> < $prec}).map(*<oper><slack>).max {
+        when * >= 0 {
+            # reduce any inner higher precedence operations
+            @expr.&reduce-expr(:prec($_));
+            # factor operations at this precedence level
+            while (my @opns = @expr.grep: -> $opn {$opn<oper> && $opn<oper><slack> == $_}, :p) {
+                my Pair $opn = @opns.head.value<oper><assoc> ~~ 'unary'|'left'
+                                ?? @opns.shift
+                                !! @opns.pop;
+                given $opn.value<oper> {
+                    my $op = .<op>;
+                    @expr.&reduce-op($opn.key, .<type>, :$op);
+                }
             }
         }
     }
@@ -65,11 +66,11 @@ method EXPR(Capture $/) {
     make @EXPR;
 }
 
-multi method infixish($/ where $<OPER><then>) {
+multi method infixish($/ where $<OPER><mid>) {
     my %oper = $<OPER><O>.ast;
     %oper<type> = 'ternary';
     %oper<op> //= $<OPER>.Str;
-    %oper<then> = $<OPER><then>.ast;
+    %oper<mid> = $<OPER><mid>.ast;
     make (:%oper);
 }
 

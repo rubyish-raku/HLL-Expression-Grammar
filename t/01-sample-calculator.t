@@ -36,7 +36,7 @@ grammar Calculator {
     token infix:sym<*>   { <sym> <O(|%multiplicative)> }
     token infix:sym</>   { <sym> <O(|%multiplicative)> }
     token infix:sym<==>  { <sym> <O(|%equality)> }
-    token infix:sym<?:>  {:s '?' <then=.EXPR> ':' <O(|%ternary, :op<?:>)> }
+    token infix:sym<?:>  {:s '?' <mid=.EXPR> ':' <O(|%ternary, :op<?:>)> }
 
     # Parenthesis
     token circumfix:sym<( )> { '(' ~ ')' <EXPR> <O(|%methodop)> }
@@ -96,7 +96,7 @@ grammar Calculator {
                 default { fail "Unhandled postfix operator: {.raku}" }
             }
         }
-        multi sub calc(% (:ternary($)! where '?:', :$cond!, :$then!, :$else!)) {
+        multi sub calc(% (:ternary($)! where '?:', :left($cond)!, :mid($then)!, :right($else)!)) {
             calc($cond.&calc ?? $then !! $else);
         }
         multi sub calc($v) { $v }
