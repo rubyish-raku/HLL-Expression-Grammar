@@ -27,12 +27,12 @@ multi reduce-op(@expr, $pos, 'ternary', :op($ternary)!) {
 
 sub reduce-expr(@expr, :$prec = Inf) {
     # find the next loosest precedence
-    given @expr.grep({.<oper> && .<oper><slack> < $prec}).map(*<oper><slack>).max {
-        when * >= 0 {
+    given @expr.grep({.does(Associative) && .<oper> && .<oper><slack> < $prec}).map(*<oper><slack>).max -> $prec {
+        if $prec >= 0 {
             # reduce any inner higher precedence operations
-            @expr.&reduce-expr(:prec($_));
+            @expr.&reduce-expr(:$prec);
             # factor operations at this precedence level
-            while (my @opns = @expr.grep: -> $opn {$opn<oper> && $opn<oper><slack> == $_}, :p) {
+            while (my @opns = @expr.grep: {.does(Associative) && .<oper> && .<oper><slack> == $prec}, :p) {
                 my Pair $opn = @opns.head.value<oper><assoc> ~~ 'unary'|'left'
                                 ?? @opns.shift
                                 !! @opns.pop;
@@ -66,11 +66,11 @@ method EXPR(Capture $/) {
     make @EXPR;
 }
 
-multi method infixish($/ where $<OPER><mid>) {
+multi method infixish($/ where $<OPER><EXPR>) {
     my %oper = $<OPER><O>.ast;
     %oper<type> = 'ternary';
     %oper<op> //= $<OPER>.Str;
-    %oper<mid> = $<OPER><mid>.ast;
+    %oper<mid> = $<OPER><EXPR>.ast;
     make (:%oper);
 }
 
@@ -78,7 +78,6 @@ multi method infixish($/) {
     my %oper = $<OPER><O>.ast;
     %oper<type> = 'infix';
     %oper<op> //= $<OPER>.Str;
-    %oper<EXPR> = .ast with $<EXPR>;
     make (:%oper);
 }
 

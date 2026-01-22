@@ -36,7 +36,7 @@ grammar Calculator {
     token infix:sym<*>   { <sym> <O(|%multiplicative)> }
     token infix:sym</>   { <sym> <O(|%multiplicative)> }
     token infix:sym<==>  { <sym> <O(|%equality)> }
-    token infix:sym<?:>  {:s '?' <mid=.EXPR> ':' <O(|%ternary, :op<?:>)> }
+    token infix:sym<?:>  {:s '?' <EXPR> ':' <O(|%ternary, :op<?:>)> }
 
     # Parenthesis
     token circumfix:sym<( )> { '(' ~ ')' <EXPR> <O(|%methodop)> }
