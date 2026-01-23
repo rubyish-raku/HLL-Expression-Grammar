@@ -18,11 +18,11 @@ grammar Calculator {
         ^ ~ $ <EXPR> || <.panic('Syntax error')>
     }
     my $slack = 0;
-    my %methodop       = :$slack, :assoc<unary>; # method call
+    my %parens         = :$slack, :assoc<unary>; # parenthesis
     $slack++;
     my %unary          = :$slack, :assoc<unary>; # + - (unary)
     $slack++;
-    my %multiplicative = :$slack, :assoc<left>;  # * /
+    my %multiplicative = :$slack, :assoc<left>;  # * / (infix)
     $slack++;
     my %additive       = :$slack, :assoc<left>;  # + - (infix)
     $slack++;
@@ -35,7 +35,7 @@ grammar Calculator {
     token infix:sym</>   { <sym> <O(|%multiplicative)> }
 
     # Parenthesis
-    token circumfix:sym<( )> { '(' ~ ')' <EXPR> <O(|%methodop)> }
+    token circumfix:sym<( )> { '(' ~ ')' <EXPR> <O(|%parens)> }
 
     # terms
     token term:sym<circumfix> {:s <circumfix> }
@@ -44,7 +44,6 @@ grammar Calculator {
     # values
     proto token value {*}
     token value:sym<number> { <num=.integer> | <num=.decimal-number> }
-    # todo check reference implementations
     token integer { \d+ }
     token decimal-number { \d* '.' \d* }
 
@@ -53,6 +52,29 @@ grammar Calculator {
     class Actions {
         use HLL::Expression::Grammar::Actions;
         also does HLL::Expression::Grammar::Actions;
+
+        multi sub calc(% (:$infix!, :$left!, :$right!)) {
+            my $l = $left.&calc;
+            my $r = $right.&calc;
+            given $infix {
+                when '+'  { $l + $r }
+                when '-'  { $l - $r }
+                when '*'  { $l * $r }
+                when '/'  { $l / $r }
+                default { fail "Unhandled infix operator: {.raku}" }
+            }
+        }
+
+        multi sub calc(% (:$prefix!, :$operand!)) {
+            my $v = $operand.&calc;
+            given $prefix {
+                when '+' { + $v }
+                when '-' { - $v }
+                default { fail "Unhandled prefix operator: {.raku}" }
+            }
+        }
+
+        multi sub calc($v) { $v }
 
         method TOP($/)  {
             make $<EXPR>.ast.head.&calc;
@@ -68,26 +90,6 @@ grammar Calculator {
         method integer($/) { make $/.Int }
         method decimal-number($/) { make $/.Rat }
 
-        multi sub calc(% (:$infix!, :$left!, :$right!)) {
-            my $l = $left.&calc;
-            my $r = $right.&calc;
-            given $infix {
-                when '+'  { $l + $r }
-                when '-'  { $l - $r }
-                when '*'  { $l * $r }
-                when '/'  { $l / $r }
-                default { fail "Unhandled infix operator: {.raku}" }
-            }
-        }
-        multi sub calc(% (:$prefix!, :$operand!)) {
-            my $v = $operand.&calc;
-            given $prefix {
-                when '+' { + $v }
-                when '-' { - $v }
-                default { fail "Unhandled prefix operator: {.raku}" }
-            }
-        }
-        multi sub calc($v) { $v }
     }
 }
 
@@ -110,6 +112,14 @@ Simple, minimalist  grammar/actions roles for defining high-level language expre
 - precedence rules
 
 Under construction. For further examples, please see `t/01-sample-calculator.t`.
+
+ACKNOWLEDGEMENTS
+================
+
+This module has been derived, and simplified, from the NQP HLL::Grammar and HLL::Actions core classes,
+and their use in nqp/examples/rubyish.nqp, which is in turn derived from the
+[Rakudo and NQP Internals Workshop](https://github.com/edumentab/rakudo-and-nqp-internals-course),
+as presented by Jonathon Worthington.
 
 AUTHOR
 ======
