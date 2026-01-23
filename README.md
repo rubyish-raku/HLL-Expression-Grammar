@@ -27,11 +27,8 @@ grammar Calculator {
     my %additive       = :$slack, :assoc<left>;  # + - (infix)
     $slack++;
 
-    rule separator       { ';' | \n }
-    rule stmtlist { [ <stmt>? ] *%% <.separator> }
     token prefix:sym<+>  { <sym> <O(|%unary)> }
     token prefix:sym<->  { <sym> <O(|%unary)> }
-    token postfix:sym<!> { <sym> <O(|%unary)> }
     token infix:sym<+>   { <sym> <O(|%additive)> }
     token infix:sym<->   { <sym> <O(|%additive)> }
     token infix:sym<*>   { <sym> <O(|%multiplicative)> }
@@ -90,17 +87,7 @@ grammar Calculator {
                 default { fail "Unhandled prefix operator: {.raku}" }
             }
         }
-        multi sub calc(% (:$postfix!, :$operand!)) {
-            my $v = $operand.&calc;
-            given $postfix {
-                when '!' { $v.&factorial }
-                default { fail "Unhandled postfix operator: {.raku}" }
-            }
-        }
         multi sub calc($v) { $v }
-
-        multi sub factorial(1) { 1 }
-        multi sub factorial(UInt:D $n) { $n * factorial($n - 1) }
     }
 }
 
