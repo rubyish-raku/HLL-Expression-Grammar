@@ -69,25 +69,21 @@ grammar Calculator {
         method integer($/) { make $/.Int }
         method decimal-number($/) { make $/.Rat }
 
-        #| ternary
-        multi sub calc(% (:infix($)! where '?:', :left($cond)!, :expr($then)!, :right($else)!)) {
-            calc($cond.&calc ?? $then !! $else);
-        }
-        #| regular infix
-        multi sub calc(% (:$infix!, :$left!, :$right!)) {
-            my $v1 = calc $left;
-            my $v2 = calc $right;
+        multi sub calc(% (:$infix!, :$left!, :$right!, :$expr)) {
+            my $l = $left.&calc;
+            my $r = $right.&calc;
             given $infix {
-                when '+'  { $v1 + $v2 }
-                when '-'  { $v1 - $v2 }
-                when '*'  { $v1 * $v2 }
-                when '/'  { $v1 / $v2 }
-                when '==' { +($v1 == $v2) }
+                when '+'  { $l + $r }
+                when '-'  { $l - $r }
+                when '*'  { $l * $r }
+                when '/'  { $l / $r }
+                when '==' { +($l == $r) }
+                when '?:' { $l ?? $expr.&calc !! $r }
                 default { fail "Unhandled infix operator: {.raku}" }
             }
         }
         multi sub calc(% (:$prefix!, :$operand!)) {
-            my $v = calc $operand;
+            my $v = $operand.&calc;
             given $prefix {
                 when '+' { + $v }
                 when '-' { - $v }
@@ -95,7 +91,7 @@ grammar Calculator {
             }
         }
         multi sub calc(% (:$postfix!, :$operand!)) {
-            my $v = calc $operand;
+            my $v = $operand.&calc;
             given $postfix {
                 when '!' { $v.&factorial }
                 default { fail "Unhandled postfix operator: {.raku}" }
