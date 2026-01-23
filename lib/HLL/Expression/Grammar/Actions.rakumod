@@ -12,6 +12,12 @@ multi reduce-op(@expr, $pos, 'postfix', :op($postfix)!) {
     @expr[$pos-1] = %( :$postfix, :$operand );
 }
 
+multi reduce-op(@expr, $pos, 'postcircumfix', :op($postfix)!) {
+    my $expression = @expr[$pos]<oper><expr>:delete.head;
+    my $operand  = @expr.splice($pos-1, 1).head;
+    @expr[$pos-1] = %( :$postfix, :$operand, :$expression );
+}
+
 multi reduce-op(@expr, $pos, 'infix', :op($infix)!) {
     my $right = @expr.splice($pos+1, 1).head;
     my $left  = @expr.splice($pos-1, 1).head;
@@ -19,8 +25,8 @@ multi reduce-op(@expr, $pos, 'infix', :op($infix)!) {
 }
 
 multi reduce-op(@expr, $pos, 'ternary', :op($ternary)!) {
-    my $right  = @expr.splice($pos+1, 1).head;
-    my $mid  = @expr[$pos]<oper><mid>:delete.head;
+    my $right = @expr.splice($pos+1, 1).head;
+    my $mid   = @expr[$pos]<oper><expr>:delete.head;
     my $left  = @expr.splice($pos-1, 1).head;
     @expr[$pos-1] = %( :$ternary, :$left, :$mid, :$right );
 }
@@ -69,9 +75,9 @@ method EXPR(Capture $/) {
 multi method infixish($/ where $<OPER><EXPR>) {
     my %oper = $<OPER><O>.ast;
     %oper<type> = 'ternary';
-    %oper<op> //= $<OPER>.Str;
-    %oper<mid> = $<OPER><EXPR>.ast;
-    make (:%oper);
+    %oper<op> //= $<OPER>.Str; 
+    %oper<expr> = $<OPER><EXPR>.ast;
+   make (:%oper);
 }
 
 multi method infixish($/) {
@@ -88,7 +94,15 @@ method prefixish($/) {
     make (:%oper);
 }
 
-method postfixish($/) {
+multi method postfixish($/ where $<OPER><EXPR>) {
+    my %oper = $<OPER><O>.ast;
+    %oper<type> = 'postcircumfix';
+    %oper<op> //= $<OPER>.Str;
+    %oper<expr> = $<OPER><EXPR>.ast;
+    make (:%oper);
+}
+
+multi method postfixish($/) {
     my %oper = $<OPER><O>.ast;
     %oper<type> = 'postfix';
     %oper<op> //= $<OPER>.Str;
