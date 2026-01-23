@@ -69,6 +69,11 @@ grammar Calculator {
         method integer($/) { make $/.Int }
         method decimal-number($/) { make $/.Rat }
 
+        #| ternary
+        multi sub calc(% (:infix($)! where '?:', :left($cond)!, :expr($then)!, :right($else)!)) {
+            calc($cond.&calc ?? $then !! $else);
+        }
+        #| regular infix
         multi sub calc(% (:$infix!, :$left!, :$right!)) {
             my $v1 = calc $left;
             my $v2 = calc $right;
@@ -95,9 +100,6 @@ grammar Calculator {
                 when '!' { $v.&factorial }
                 default { fail "Unhandled postfix operator: {.raku}" }
             }
-        }
-        multi sub calc(% (:ternary($)! where '?:', :left($cond)!, :mid($then)!, :right($else)!)) {
-            calc($cond.&calc ?? $then !! $else);
         }
         multi sub calc($v) { $v }
 

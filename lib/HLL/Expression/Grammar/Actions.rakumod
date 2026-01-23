@@ -13,9 +13,9 @@ multi reduce-op(@expr, $pos, 'postfix', :op($postfix)!) {
 }
 
 multi reduce-op(@expr, $pos, 'postcircumfix', :op($postfix)!) {
-    my $expression = @expr[$pos]<oper><expr>:delete.head;
+    my $expr = @expr[$pos]<oper><expr>:delete.head;
     my $operand  = @expr.splice($pos-1, 1).head;
-    @expr[$pos-1] = %( :$postfix, :$operand, :$expression );
+    @expr[$pos-1] = %( :$postfix, :$operand, :$expr );
 }
 
 multi reduce-op(@expr, $pos, 'infix', :op($infix)!) {
@@ -24,11 +24,11 @@ multi reduce-op(@expr, $pos, 'infix', :op($infix)!) {
     @expr[$pos-1] = %( :$infix, :$left, :$right );
 }
 
-multi reduce-op(@expr, $pos, 'ternary', :op($ternary)!) {
+multi reduce-op(@expr, $pos, 'ternary', :op($infix)!) {
     my $right = @expr.splice($pos+1, 1).head;
-    my $mid   = @expr[$pos]<oper><expr>:delete.head;
+    my $expr   = @expr[$pos]<oper><expr>:delete.head;
     my $left  = @expr.splice($pos-1, 1).head;
-    @expr[$pos-1] = %( :$ternary, :$left, :$mid, :$right );
+    @expr[$pos-1] = %( :$infix, :$left, :$expr, :$right );
 }
 
 sub reduce-expr(@expr, :$prec = Inf) {
